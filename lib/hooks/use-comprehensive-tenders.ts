@@ -132,7 +132,7 @@ export function useComprehensiveTenders(
     dateTo = "2025-03-31",
     pageSize = 50,
     maxConcurrency = 8,
-    enableStreaming = true,
+    enableStreaming = false, // Disable streaming by default to avoid EventSource errors
     cacheEnabled = true,
     refreshInterval,
     autoRetry = true,
@@ -191,8 +191,24 @@ export function useComprehensiveTenders(
     }))
 
     try {
+      // Add a timeout to detect if EventSource fails to connect
+      const timeoutId = setTimeout(() => {
+        console.log("EventSource connection timeout, falling back to regular fetch")
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close()
+          eventSourceRef.current = null
+        }
+        handleRegularFetch()
+      }, 5000) // 5 second timeout
+
       const eventSource = new EventSource(url)
       eventSourceRef.current = eventSource
+
+      // Clear timeout on successful connection
+      eventSource.onopen = () => {
+        clearTimeout(timeoutId)
+        console.log("EventSource connection established")
+      }
 
       eventSource.onmessage = (event) => {
         try {
@@ -453,7 +469,12 @@ export function useComprehensiveTenders(
   // Main fetch function that chooses between streaming and regular
   const fetchTenders = useCallback(async () => {
     if (enableStreaming) {
-      await handleStreamingFetch()
+      try {
+        await handleStreamingFetch()
+      } catch (error) {
+        console.error("Streaming fetch failed, falling back to regular fetch:", error)
+        await handleRegularFetch()
+      }
     } else {
       await handleRegularFetch()
     }
