@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { getFallbackService, FallbackStrategyService } from "@/lib/services/fallback-strategy"
 
 // Enhanced data interfaces based on the comprehensive API
 export interface EnhancedTenderInfo {
@@ -157,6 +158,20 @@ export function useComprehensiveTenders(
   const retryCountRef = useRef(0)
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const fallbackServiceRef = useRef<FallbackStrategyService | null>(null)
+
+  // Initialize fallback service
+  if (!fallbackServiceRef.current) {
+    fallbackServiceRef.current = getFallbackService({
+      enableCachedFallback: cacheEnabled,
+      maxCacheAge: 24 * 60 * 60 * 1000, // 24 hours
+      retrySchedule: [1000, 2000, 5000, 10000, 30000],
+      maxRetryAttempts: maxRetries,
+      gracefulDegradationThreshold: 0.7,
+      offlineDetection: true,
+      backgroundRefresh: true,
+    })
+  }
 
   // Build API URL with parameters
   const buildApiUrl = useCallback((streaming: boolean = false) => {
@@ -220,7 +235,7 @@ export function useComprehensiveTenders(
               if (chunk.data?.progress) {
                 setState(prev => ({
                   ...prev,
-                  progress: chunk.data!.progress!,
+                  progress: chunk.data?.progress || null,
                   performance: chunk.data?.performance ? {
                     totalFetchTime: chunk.data.performance.totalFetchTime ?? prev.performance?.totalFetchTime ?? 0,
                     averageRequestTime: chunk.data.performance.averageRequestTime ?? prev.performance?.averageRequestTime ?? 0,
@@ -237,8 +252,8 @@ export function useComprehensiveTenders(
               if (chunk.data?.releases) {
                 setState(prev => ({
                   ...prev,
-                  tenders: chunk.data!.releases!,
-                  fetchedCount: chunk.data!.releases!.length,
+                  tenders: chunk.data?.releases || [],
+                  fetchedCount: chunk.data?.releases?.length || 0,
                   progress: chunk.data?.progress || prev.progress,
                   performance: chunk.data?.performance ? {
                     totalFetchTime: chunk.data.performance.totalFetchTime ?? prev.performance?.totalFetchTime ?? 0,
@@ -256,7 +271,7 @@ export function useComprehensiveTenders(
               if (chunk.data?.releases) {
                 setState(prev => ({
                   ...prev,
-                  tenders: chunk.data!.releases!,
+                  tenders: chunk.data?.releases || [],
                   loading: false,
                   progress: chunk.data?.progress || null,
                   performance: chunk.data?.performance ? {
@@ -267,8 +282,8 @@ export function useComprehensiveTenders(
                     discoveryTime: chunk.data.performance.discoveryTime ?? prev.performance?.discoveryTime ?? 0,
                     aggregationTime: chunk.data.performance.aggregationTime ?? prev.performance?.aggregationTime ?? 0,
                   } : prev.performance,
-                  totalCount: chunk.data!.releases!.length,
-                  fetchedCount: chunk.data!.releases!.length,
+                  totalCount: chunk.data?.releases?.length || 0,
+                  fetchedCount: chunk.data?.releases?.length || 0,
                   lastUpdated: new Date().toISOString(),
                 }))
               }
@@ -346,7 +361,7 @@ export function useComprehensiveTenders(
     }
   }, [buildApiUrl, autoRetry, maxRetries])
 
-  // Handle regular fetch (non-streaming)
+  // Handle regular fetch (non-streaming) with fallback strategies
   const handleRegularFetch = useCallback(async () => {
     // Cancel any existing request
     if (abortControllerRef.current) {
@@ -357,7 +372,7 @@ export function useComprehensiveTenders(
     abortControllerRef.current = abortController
 
     const url = buildApiUrl(false)
-    console.log("Starting regular fetch:", { url, timestamp: new Date().toISOString() })
+    console.log("Starting regular fetch with fallback:", { url, timestamp: new Date().toISOString() })
 
     setState(prev => ({
       ...prev,
@@ -366,7 +381,11 @@ export function useComprehensiveTenders(
       progress: { completed: 0, total: 1, percentage: 0, currentPhase: 'fetching' },
     }))
 
-    try {
+    // Generate cache key for fallback service
+    const cacheKey = `comprehensive-tenders-${dateFrom}-${dateTo}-${pageSize}-${maxConcurrency}`
+
+    // Define the fetch operation
+    const fetchOperation = async () => {
       const response = await fetch(url, {
         signal: abortController.signal,
         headers: {
@@ -400,71 +419,146 @@ export function useComprehensiveTenders(
         throw fetchError
       }
 
-      const result = await response.json()
-      console.log("Regular fetch completed:", {
-        totalReleases: result.data?.releases?.length || 0,
-        errors: result.errors?.length || 0,
-        warnings: result.warnings?.length || 0,
+      return await response.json()
+    }
+
+    try {
+      // Use fallback service to execute the operation with comprehensive fallback strategies
+      const fallbackResult = await fallbackServiceRef.current!.executeWithFallback(
+        fetchOperation,
+        cacheKey,
+        {
+          cacheKeyOptions: {
+            dateFrom,
+            dateTo,
+            pageSize,
+            maxConcurrency,
+          },
+          operationName: 'comprehensive-tenders-fetch',
+          allowPartialData: true,
+        }
+      )
+
+      console.log("Fetch completed with fallback result:", {
+        source: fallbackResult.source,
+        isFallback: fallbackResult.isFallback,
+        totalReleases: fallbackResult.data?.releases?.length || 0,
+        warnings: fallbackResult.warnings.length,
+        errors: fallbackResult.errors.length,
       })
 
+      // Update state based on fallback result
       setState(prev => ({
         ...prev,
-        tenders: result.data?.releases || [],
+        tenders: fallbackResult.data?.releases || [],
         loading: false,
         progress: null,
-        error: null,
-        performance: result.data?.performance || null,
-        totalCount: result.data?.pagination?.totalCount || 0,
-        fetchedCount: result.data?.pagination?.fetchedCount || 0,
-        lastUpdated: result.data?.lastUpdated || new Date().toISOString(),
-        warnings: result.warnings || [],
+        error: fallbackResult.errors.length > 0 ? fallbackResult.errors[0] : null,
+        performance: fallbackResult.performance || fallbackResult.data?.performance || null,
+        totalCount: fallbackResult.data?.pagination?.totalCount || 0,
+        fetchedCount: fallbackResult.data?.pagination?.fetchedCount || 0,
+        lastUpdated: fallbackResult.source === 'live' 
+          ? new Date().toISOString() 
+          : prev.lastUpdated || new Date().toISOString(),
+        warnings: [
+          ...fallbackResult.warnings,
+          ...(fallbackResult.data?.warnings || [])
+        ],
       }))
+
+      // Add fallback-specific warnings
+      if (fallbackResult.isFallback) {
+        setState(prev => ({
+          ...prev,
+          warnings: [
+            ...prev.warnings,
+            fallbackResult.source === 'cache' 
+              ? `Data loaded from cache (${fallbackResult.cacheAge ? Math.round(fallbackResult.cacheAge / (1000 * 60)) : 'unknown'} minutes old)`
+              : fallbackResult.source === 'partial'
+              ? 'Partial data recovered from alternative sources'
+              : 'Using fallback data source'
+          ]
+        }))
+      }
 
       retryCountRef.current = 0
 
     } catch (error) {
-      console.error("Regular fetch failed:", error)
+      console.error("Fetch with fallback failed:", error)
 
-      let fetchError: FetchError
-      if (error instanceof Error && 'type' in error && 'retryable' in error) {
-        fetchError = error as FetchError
-      } else if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          return // Request was cancelled, don't update state
-        }
-
-        fetchError = {
-          type: error.message.includes('fetch') ? 'network' : 'api',
-          message: error.message,
-          retryable: true,
-        }
-      } else {
-        fetchError = {
-          type: 'api',
-          message: 'An unexpected error occurred',
-          retryable: true,
-        }
-      }
-
-      setState(prev => ({
-        ...prev,
-        error: fetchError,
-        loading: false,
-        progress: null,
-      }))
-
-      // Auto-retry logic for regular fetch
-      if (autoRetry && fetchError.retryable && retryCountRef.current < maxRetries) {
-        const retryDelay = fetchError.retryAfter || Math.min(1000 * Math.pow(2, retryCountRef.current), 30000)
-        console.log(`Auto-retrying regular fetch in ${retryDelay}ms (attempt ${retryCountRef.current + 1}/${maxRetries})`)
+      // Check if we have offline data available
+      const offlineState = await fallbackServiceRef.current!.getOfflineState(cacheKey)
+      
+      if (offlineState.hasOfflineData) {
+        console.log("Using offline data as last resort")
         
-        setTimeout(() => {
-          retryCountRef.current++
-          handleRegularFetch()
-        }, retryDelay)
+        setState(prev => ({
+          ...prev,
+          tenders: offlineState.offlineData?.releases || [],
+          loading: false,
+          progress: null,
+          error: {
+            type: 'network',
+            message: 'Working offline with cached data',
+            retryable: true,
+          },
+          performance: offlineState.offlineData?.performance || null,
+          totalCount: offlineState.offlineData?.pagination?.totalCount || 0,
+          fetchedCount: offlineState.offlineData?.pagination?.fetchedCount || 0,
+          warnings: [
+            'Working in offline mode',
+            `Using cached data from ${offlineState.cacheAge ? Math.round(offlineState.cacheAge / (1000 * 60)) : 'unknown'} minutes ago`,
+            ...offlineState.recommendations,
+            ...(offlineState.isStale ? ['Cached data may be outdated'] : [])
+          ],
+        }))
+      } else {
+        // No fallback data available
+        let fetchError: FetchError
+        if (error instanceof Error && 'type' in error && 'retryable' in error) {
+          fetchError = error as FetchError
+        } else if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            return // Request was cancelled, don't update state
+          }
+
+          fetchError = {
+            type: error.message.includes('fetch') ? 'network' : 'api',
+            message: error.message,
+            retryable: true,
+          }
+        } else {
+          fetchError = {
+            type: 'api',
+            message: 'An unexpected error occurred',
+            retryable: true,
+          }
+        }
+
+        setState(prev => ({
+          ...prev,
+          error: fetchError,
+          loading: false,
+          progress: null,
+          warnings: [
+            'No cached data available for offline use',
+            'Please check your internet connection and try again'
+          ],
+        }))
+
+        // Auto-retry logic for regular fetch
+        if (autoRetry && fetchError.retryable && retryCountRef.current < maxRetries) {
+          const retryDelay = fetchError.retryAfter || Math.min(1000 * Math.pow(2, retryCountRef.current), 30000)
+          console.log(`Auto-retrying regular fetch in ${retryDelay}ms (attempt ${retryCountRef.current + 1}/${maxRetries})`)
+          
+          setTimeout(() => {
+            retryCountRef.current++
+            handleRegularFetch()
+          }, retryDelay)
+        }
       }
     }
-  }, [buildApiUrl, cacheEnabled, autoRetry, maxRetries])
+  }, [buildApiUrl, cacheEnabled, autoRetry, maxRetries, dateFrom, dateTo, pageSize, maxConcurrency])
 
   // Main fetch function that chooses between streaming and regular
   const fetchTenders = useCallback(async () => {

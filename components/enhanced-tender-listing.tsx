@@ -1,34 +1,36 @@
-"use client"
+"use client";
 
-import React, { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
-import { 
-  RefreshCw, 
-  AlertCircle, 
-  WifiOff, 
-  TrendingUp, 
-  Clock, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  RefreshCw,
+  AlertCircle,
+  WifiOff,
+  TrendingUp,
+  Clock,
   MapPin,
   Building,
   Search,
   Filter,
   X,
-} from "lucide-react"
-import { useComprehensiveTenders } from "@/lib/hooks/use-comprehensive-tenders"
-import { useTenderFilters } from "@/lib/hooks/use-tender-filters"
-import AdvancedTenderFilters from "@/components/advanced-tender-filters"
-import VirtualTenderList from "@/components/virtual-tender-list"
+} from "lucide-react";
+import { useComprehensiveTenders } from "@/lib/hooks/use-comprehensive-tenders";
+import { useTenderFilters } from "@/lib/hooks/use-tender-filters";
+import AdvancedTenderFilters from "@/components/advanced-tender-filters";
+import VirtualTenderList from "@/components/virtual-tender-list";
+import { PerformanceMonitor } from "@/components/ui/performance-monitor";
+import { OfflineErrorDisplay } from "@/components/ui/offline-error-display";
 
 export interface EnhancedTenderListingProps {
-  className?: string
-  enableVirtualScrolling?: boolean
-  enableAdvancedFilters?: boolean
-  showPerformanceMetrics?: boolean
-  autoRefreshInterval?: number
+  className?: string;
+  enableVirtualScrolling?: boolean;
+  enableAdvancedFilters?: boolean;
+  showPerformanceMetrics?: boolean;
+  autoRefreshInterval?: number;
 }
 
 export default function EnhancedTenderListing({
@@ -39,62 +41,63 @@ export default function EnhancedTenderListing({
   autoRefreshInterval,
 }: EnhancedTenderListingProps) {
   // State for UI controls
-  const [showFilters, setShowFilters] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showFilters, setShowFilters] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Comprehensive tenders hook
-  const { state: tendersState, actions: tendersActions } = useComprehensiveTenders({
-    dateFrom: "2025-01-01",
-    dateTo: "2025-03-31",
-    pageSize: 50,
-    maxConcurrency: 8,
-    enableStreaming: true,
-    cacheEnabled: true,
-    refreshInterval: autoRefreshInterval,
-    autoRetry: true,
-    maxRetries: 3,
-  })
+  const { state: tendersState, actions: tendersActions } =
+    useComprehensiveTenders({
+      dateFrom: "2025-01-01",
+      dateTo: "2025-03-31",
+      pageSize: 50,
+      maxConcurrency: 8,
+      enableStreaming: true,
+      cacheEnabled: true,
+      refreshInterval: autoRefreshInterval,
+      autoRetry: true,
+      maxRetries: 3,
+    });
 
   // Filtering hook
-  const { 
-    filters, 
-    sortConfig, 
-    filteredResult, 
-    actions: filterActions 
+  const {
+    filters,
+    sortConfig,
+    filteredResult,
+    actions: filterActions,
   } = useTenderFilters({
     tenders: tendersState.tenders,
     enableUrlSync: true,
     debounceMs: 300,
-    defaultSort: { field: 'closingDate', direction: 'asc' },
-  })
+    defaultSort: { field: "closingDate", direction: "asc" },
+  });
 
   // Handle refresh
   const handleRefresh = async () => {
-    setIsRefreshing(true)
+    setIsRefreshing(true);
     try {
-      await tendersActions.refresh()
+      await tendersActions.refresh();
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }
+  };
 
   // Handle retry
   const handleRetry = async () => {
-    await tendersActions.retry()
-  }
+    await tendersActions.retry();
+  };
 
   // Handle clear cache
   const handleClearCache = () => {
-    tendersActions.clearCache()
-    handleRefresh()
-  }
+    tendersActions.clearCache();
+    handleRefresh();
+  };
 
   // Performance metrics display
   const renderPerformanceMetrics = () => {
-    if (!showPerformanceMetrics || !tendersState.performance) return null
+    if (!showPerformanceMetrics || !tendersState.performance) return null;
 
-    const { performance } = tendersState
-    
+    const { performance } = tendersState;
+
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4">
@@ -108,7 +111,7 @@ export default function EnhancedTenderListing({
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-green-500" />
@@ -120,7 +123,7 @@ export default function EnhancedTenderListing({
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-orange-500" />
@@ -132,7 +135,7 @@ export default function EnhancedTenderListing({
             </div>
           </div>
         </Card>
-        
+
         <Card className="p-4">
           <div className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4 text-purple-500" />
@@ -145,58 +148,60 @@ export default function EnhancedTenderListing({
           </div>
         </Card>
       </div>
-    )
-  }
+    );
+  };
 
   // Enhanced progress indicator with detailed feedback
   const renderProgressIndicator = () => {
-    if (!tendersState.progress) return null
+    if (!tendersState.progress) return null;
 
-    const { progress } = tendersState
-    
+    const { progress } = tendersState;
+
     // Calculate progress color based on phase and percentage
     const getProgressColor = () => {
-      if (progress.currentPhase === 'error') return 'bg-red-500'
-      if (progress.percentage < 25) return 'bg-blue-500'
-      if (progress.percentage < 75) return 'bg-indigo-500'
-      return 'bg-green-500'
-    }
+      if (progress.currentPhase === "error") return "bg-red-500";
+      if (progress.percentage < 25) return "bg-blue-500";
+      if (progress.percentage < 75) return "bg-indigo-500";
+      return "bg-green-500";
+    };
 
     const getPhaseIcon = () => {
       switch (progress.currentPhase) {
-        case 'initializing':
-          return <RefreshCw className="h-4 w-4 animate-spin" />
-        case 'discovering':
-          return <Search className="h-4 w-4 animate-pulse" />
-        case 'fetching':
-          return <TrendingUp className="h-4 w-4" />
-        case 'aggregating':
-          return <Building className="h-4 w-4" />
-        case 'complete':
-          return <div className="h-4 w-4 bg-green-500 rounded-full flex items-center justify-center">
-            <div className="h-2 w-2 bg-white rounded-full"></div>
-          </div>
+        case "initializing":
+          return <RefreshCw className="h-4 w-4 animate-spin" />;
+        case "discovering":
+          return <Search className="h-4 w-4 animate-pulse" />;
+        case "fetching":
+          return <TrendingUp className="h-4 w-4" />;
+        case "aggregating":
+          return <Building className="h-4 w-4" />;
+        case "complete":
+          return (
+            <div className="h-4 w-4 bg-green-500 rounded-full flex items-center justify-center">
+              <div className="h-2 w-2 bg-white rounded-full"></div>
+            </div>
+          );
         default:
-          return <Clock className="h-4 w-4" />
+          return <Clock className="h-4 w-4" />;
       }
-    }
+    };
 
     const getPhaseDescription = () => {
       switch (progress.currentPhase) {
-        case 'initializing':
-          return 'Setting up data fetching process...'
-        case 'discovering':
-          return 'Discovering total available tenders...'
-        case 'fetching':
-          return 'Fetching tender data from multiple pages...'
-        case 'aggregating':
-          return 'Processing and combining tender information...'
-        case 'complete':
-          return 'All tender data has been successfully loaded'
+        case "initializing":
+          return "Setting up data fetching process...";
+        case "discovering":
+          return "Discovering total available tenders...";
+        case "fetching":
+          return "Fetching tender data from multiple pages...";
+        case "aggregating":
+          return "Processing and combining tender information...";
+        case "complete":
+          return "All tender data has been successfully loaded";
         default:
-          return 'Processing tender data...'
+          return "Processing tender data...";
       }
-    }
+    };
 
     return (
       <Card className="mb-6 border-l-4 border-l-blue-500">
@@ -206,7 +211,9 @@ export default function EnhancedTenderListing({
               {getPhaseIcon()}
               <div>
                 <div className="text-sm font-semibold text-gray-900">
-                  {progress.currentPhase.charAt(0).toUpperCase() + progress.currentPhase.slice(1)} Phase
+                  {progress.currentPhase.charAt(0).toUpperCase() +
+                    progress.currentPhase.slice(1)}{" "}
+                  Phase
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {getPhaseDescription()}
@@ -217,23 +224,21 @@ export default function EnhancedTenderListing({
               <div className="text-lg font-bold text-gray-900">
                 {progress.percentage.toFixed(1)}%
               </div>
-              <div className="text-xs text-muted-foreground">
-                Complete
-              </div>
+              <div className="text-xs text-muted-foreground">Complete</div>
             </div>
           </div>
 
           {/* Enhanced progress bar with segments */}
           <div className="relative">
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div 
+              <div
                 className={`h-3 rounded-full transition-all duration-500 ease-out ${getProgressColor()}`}
                 style={{ width: `${progress.percentage}%` }}
               >
                 <div className="h-full bg-gradient-to-r from-transparent to-white/20 rounded-full"></div>
               </div>
             </div>
-            
+
             {/* Progress segments indicators */}
             <div className="absolute top-0 left-0 w-full h-3 flex">
               {[25, 50, 75].map((segment) => (
@@ -250,33 +255,46 @@ export default function EnhancedTenderListing({
           <div className="flex items-center justify-between mt-4 text-sm">
             <div className="flex items-center gap-4">
               <span className="text-muted-foreground">
-                <span className="font-semibold text-gray-900">{progress.completed.toLocaleString()}</span>
+                <span className="font-semibold text-gray-900">
+                  {progress.completed.toLocaleString()}
+                </span>
                 {" of "}
-                <span className="font-semibold text-gray-900">{progress.total.toLocaleString()}</span>
+                <span className="font-semibold text-gray-900">
+                  {progress.total.toLocaleString()}
+                </span>
                 {" items processed"}
               </span>
-              
+
               {tendersState.performance?.averageRequestTime && (
                 <span className="text-muted-foreground">
-                  Avg: {tendersState.performance.averageRequestTime.toFixed(0)}ms/request
+                  Avg: {tendersState.performance.averageRequestTime.toFixed(0)}
+                  ms/request
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-4 text-xs">
-              {progress.estimatedTimeRemaining && progress.estimatedTimeRemaining > 1000 && (
-                <div className="flex items-center gap-1 text-blue-600">
-                  <Clock className="h-3 w-3" />
-                  <span>~{Math.ceil(progress.estimatedTimeRemaining / 1000)}s remaining</span>
-                </div>
-              )}
-              
-              {tendersState.performance?.errorRate !== undefined && tendersState.performance.errorRate > 0 && (
-                <div className="flex items-center gap-1 text-orange-600">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>{(tendersState.performance.errorRate * 100).toFixed(1)}% errors</span>
-                </div>
-              )}
+              {progress.estimatedTimeRemaining &&
+                progress.estimatedTimeRemaining > 1000 && (
+                  <div className="flex items-center gap-1 text-blue-600">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      ~{Math.ceil(progress.estimatedTimeRemaining / 1000)}s
+                      remaining
+                    </span>
+                  </div>
+                )}
+
+              {tendersState.performance?.errorRate !== undefined &&
+                tendersState.performance.errorRate > 0 && (
+                  <div className="flex items-center gap-1 text-orange-600">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>
+                      {(tendersState.performance.errorRate * 100).toFixed(1)}%
+                      errors
+                    </span>
+                  </div>
+                )}
             </div>
           </div>
 
@@ -286,28 +304,35 @@ export default function EnhancedTenderListing({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                 <div className="text-center">
                   <div className="font-semibold text-gray-900">
-                    {(tendersState.performance.totalFetchTime / 1000).toFixed(1)}s
+                    {(tendersState.performance.totalFetchTime / 1000).toFixed(
+                      1
+                    )}
+                    s
                   </div>
                   <div className="text-muted-foreground">Total Time</div>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="font-semibold text-gray-900">
                     {(tendersState.performance.cacheHitRate * 100).toFixed(0)}%
                   </div>
                   <div className="text-muted-foreground">Cache Hit</div>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="font-semibold text-gray-900">
                     {tendersState.performance.averageRequestTime.toFixed(0)}ms
                   </div>
                   <div className="text-muted-foreground">Avg Request</div>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="font-semibold text-gray-900">
-                    {((progress.completed / (tendersState.performance.totalFetchTime / 1000)) || 0).toFixed(1)}/s
+                    {(
+                      progress.completed /
+                        (tendersState.performance.totalFetchTime / 1000) || 0
+                    ).toFixed(1)}
+                    /s
                   </div>
                   <div className="text-muted-foreground">Throughput</div>
                 </div>
@@ -316,44 +341,44 @@ export default function EnhancedTenderListing({
           )}
         </CardContent>
       </Card>
-    )
-  }
+    );
+  };
 
   // Error display
   const renderError = () => {
-    if (!tendersState.error) return null
+    if (!tendersState.error) return null;
 
-    const { error } = tendersState
-    
+    const { error } = tendersState;
+
     const getErrorIcon = () => {
       switch (error.type) {
         case "network":
-          return <WifiOff className="h-5 w-5" />
+          return <WifiOff className="h-5 w-5" />;
         case "api":
-          return <AlertCircle className="h-5 w-5" />
+          return <AlertCircle className="h-5 w-5" />;
         case "timeout":
-          return <Clock className="h-5 w-5" />
+          return <Clock className="h-5 w-5" />;
         case "rate_limit":
-          return <RefreshCw className="h-5 w-5" />
+          return <RefreshCw className="h-5 w-5" />;
         default:
-          return <AlertCircle className="h-5 w-5" />
+          return <AlertCircle className="h-5 w-5" />;
       }
-    }
+    };
 
     const getErrorTitle = () => {
       switch (error.type) {
         case "network":
-          return "Connection Problem"
+          return "Connection Problem";
         case "api":
-          return "API Error"
+          return "API Error";
         case "timeout":
-          return "Request Timeout"
+          return "Request Timeout";
         case "rate_limit":
-          return "Rate Limited"
+          return "Rate Limited";
         default:
-          return "Error"
+          return "Error";
       }
-    }
+    };
 
     return (
       <Alert variant="destructive" className="mb-6">
@@ -374,43 +399,46 @@ export default function EnhancedTenderListing({
           )}
         </AlertDescription>
       </Alert>
-    )
-  }
+    );
+  };
 
   // Comprehensive statistics display with data freshness and performance metrics
   const renderStatistics = () => {
     const getDataFreshnessColor = () => {
-      if (!tendersState.lastUpdated) return 'text-gray-500'
-      
-      const lastUpdate = new Date(tendersState.lastUpdated)
-      const now = new Date()
-      const minutesAgo = (now.getTime() - lastUpdate.getTime()) / (1000 * 60)
-      
-      if (minutesAgo < 5) return 'text-green-600'
-      if (minutesAgo < 30) return 'text-yellow-600'
-      return 'text-orange-600'
-    }
+      if (!tendersState.lastUpdated) return "text-gray-500";
+
+      const lastUpdate = new Date(tendersState.lastUpdated);
+      const now = new Date();
+      const minutesAgo = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+
+      if (minutesAgo < 5) return "text-green-600";
+      if (minutesAgo < 30) return "text-yellow-600";
+      return "text-orange-600";
+    };
 
     const getDataFreshnessText = () => {
-      if (!tendersState.lastUpdated) return 'Never updated'
-      
-      const lastUpdate = new Date(tendersState.lastUpdated)
-      const now = new Date()
-      const minutesAgo = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60))
-      
-      if (minutesAgo < 1) return 'Just updated'
-      if (minutesAgo < 60) return `${minutesAgo}m ago`
-      
-      const hoursAgo = Math.floor(minutesAgo / 60)
-      if (hoursAgo < 24) return `${hoursAgo}h ago`
-      
-      const daysAgo = Math.floor(hoursAgo / 24)
-      return `${daysAgo}d ago`
-    }
+      if (!tendersState.lastUpdated) return "Never updated";
 
-    const completionPercentage = tendersState.totalCount > 0 
-      ? (tendersState.fetchedCount / tendersState.totalCount) * 100 
-      : 100
+      const lastUpdate = new Date(tendersState.lastUpdated);
+      const now = new Date();
+      const minutesAgo = Math.floor(
+        (now.getTime() - lastUpdate.getTime()) / (1000 * 60)
+      );
+
+      if (minutesAgo < 1) return "Just updated";
+      if (minutesAgo < 60) return `${minutesAgo}m ago`;
+
+      const hoursAgo = Math.floor(minutesAgo / 60);
+      if (hoursAgo < 24) return `${hoursAgo}h ago`;
+
+      const daysAgo = Math.floor(hoursAgo / 24);
+      return `${daysAgo}d ago`;
+    };
+
+    const completionPercentage =
+      tendersState.totalCount > 0
+        ? (tendersState.fetchedCount / tendersState.totalCount) * 100
+        : 100;
 
     return (
       <div className="space-y-4 mb-6">
@@ -422,17 +450,21 @@ export default function EnhancedTenderListing({
               <div className="space-y-2">
                 <div className="text-2xl font-bold text-gray-900">
                   {filteredResult.filteredCount.toLocaleString()}
-                  {filteredResult.filteredCount !== filteredResult.totalCount && (
+                  {filteredResult.filteredCount !==
+                    filteredResult.totalCount && (
                     <span className="text-lg text-muted-foreground font-normal">
-                      {" of "}{filteredResult.totalCount.toLocaleString()}
+                      {" of "}
+                      {filteredResult.totalCount.toLocaleString()}
                     </span>
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {filteredResult.filteredCount === 1 ? 'Tender' : 'Tenders'} Available
+                  {filteredResult.filteredCount === 1 ? "Tender" : "Tenders"}{" "}
+                  Available
                   {filteredResult.appliedFiltersCount > 0 && (
                     <Badge variant="secondary" className="ml-2 text-xs">
-                      {filteredResult.appliedFiltersCount} filter{filteredResult.appliedFiltersCount !== 1 ? 's' : ''}
+                      {filteredResult.appliedFiltersCount} filter
+                      {filteredResult.appliedFiltersCount !== 1 ? "s" : ""}
                     </Badge>
                   )}
                 </div>
@@ -444,29 +476,38 @@ export default function EnhancedTenderListing({
                   <div className="text-2xl font-bold text-gray-900">
                     {completionPercentage.toFixed(0)}%
                   </div>
-                  <div className={`h-2 w-2 rounded-full ${
-                    completionPercentage === 100 ? 'bg-green-500' : 
-                    completionPercentage > 80 ? 'bg-yellow-500' : 'bg-blue-500'
-                  }`}></div>
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      completionPercentage === 100
+                        ? "bg-green-500"
+                        : completionPercentage > 80
+                        ? "bg-yellow-500"
+                        : "bg-blue-500"
+                    }`}
+                  ></div>
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Data Completeness
                   <div className="text-xs">
-                    {tendersState.fetchedCount.toLocaleString()} of {tendersState.totalCount.toLocaleString()} fetched
+                    {tendersState.fetchedCount.toLocaleString()} of{" "}
+                    {tendersState.totalCount.toLocaleString()} fetched
                   </div>
                 </div>
               </div>
 
               {/* Data freshness */}
               <div className="space-y-2">
-                <div className={`text-2xl font-bold ${getDataFreshnessColor()}`}>
+                <div
+                  className={`text-2xl font-bold ${getDataFreshnessColor()}`}
+                >
                   {getDataFreshnessText()}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Data Freshness
                   {tendersState.lastUpdated && (
                     <div className="text-xs">
-                      Last updated {new Date(tendersState.lastUpdated).toLocaleString()}
+                      Last updated{" "}
+                      {new Date(tendersState.lastUpdated).toLocaleString()}
                     </div>
                   )}
                 </div>
@@ -479,40 +520,57 @@ export default function EnhancedTenderListing({
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                   <div className="text-center">
                     <div className="font-semibold text-gray-900">
-                      {(tendersState.performance.totalFetchTime / 1000).toFixed(1)}s
+                      {(tendersState.performance.totalFetchTime / 1000).toFixed(
+                        1
+                      )}
+                      s
                     </div>
-                    <div className="text-xs text-muted-foreground">Fetch Time</div>
+                    <div className="text-xs text-muted-foreground">
+                      Fetch Time
+                    </div>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="font-semibold text-gray-900">
-                      {(tendersState.performance.cacheHitRate * 100).toFixed(0)}%
+                      {(tendersState.performance.cacheHitRate * 100).toFixed(0)}
+                      %
                     </div>
-                    <div className="text-xs text-muted-foreground">Cache Hit Rate</div>
+                    <div className="text-xs text-muted-foreground">
+                      Cache Hit Rate
+                    </div>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="font-semibold text-gray-900">
                       {tendersState.performance.averageRequestTime.toFixed(0)}ms
                     </div>
-                    <div className="text-xs text-muted-foreground">Avg Request</div>
+                    <div className="text-xs text-muted-foreground">
+                      Avg Request
+                    </div>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="font-semibold text-gray-900">
                       {(tendersState.performance.errorRate * 100).toFixed(1)}%
                     </div>
-                    <div className="text-xs text-muted-foreground">Error Rate</div>
+                    <div className="text-xs text-muted-foreground">
+                      Error Rate
+                    </div>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="font-semibold text-gray-900">
-                      {tendersState.performance.totalFetchTime > 0 
-                        ? (tendersState.fetchedCount / (tendersState.performance.totalFetchTime / 1000)).toFixed(1)
-                        : '0'
-                      }/s
+                      {tendersState.performance.totalFetchTime > 0
+                        ? (
+                            tendersState.fetchedCount /
+                            (tendersState.performance.totalFetchTime / 1000)
+                          ).toFixed(1)
+                        : "0"}
+                      /s
                     </div>
-                    <div className="text-xs text-muted-foreground">Throughput</div>
+                    <div className="text-xs text-muted-foreground">
+                      Throughput
+                    </div>
                   </div>
                 </div>
               </div>
@@ -525,17 +583,20 @@ export default function EnhancedTenderListing({
                   {tendersState.warnings.length > 0 && (
                     <div className="flex items-center gap-2 text-orange-600">
                       <AlertCircle className="h-4 w-4" />
-                      <span>{tendersState.warnings.length} warning{tendersState.warnings.length !== 1 ? 's' : ''}</span>
+                      <span>
+                        {tendersState.warnings.length} warning
+                        {tendersState.warnings.length !== 1 ? "s" : ""}
+                      </span>
                     </div>
                   )}
-                  
+
                   {tendersState.error && (
                     <div className="flex items-center gap-2 text-red-600">
                       <WifiOff className="h-4 w-4" />
                       <span>Fetch error occurred</span>
                     </div>
                   )}
-                  
+
                   {completionPercentage < 100 && !tendersState.loading && (
                     <div className="flex items-center gap-2 text-blue-600">
                       <Clock className="h-4 w-4" />
@@ -553,13 +614,24 @@ export default function EnhancedTenderListing({
           <div className="flex items-center gap-2">
             {/* Data quality indicator */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className={`h-2 w-2 rounded-full ${
-                completionPercentage === 100 && tendersState.performance?.errorRate === 0 ? 'bg-green-500' :
-                completionPercentage > 90 ? 'bg-yellow-500' : 'bg-orange-500'
-              }`}></div>
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  completionPercentage === 100 &&
+                  tendersState.performance?.errorRate === 0
+                    ? "bg-green-500"
+                    : completionPercentage > 90
+                    ? "bg-yellow-500"
+                    : "bg-orange-500"
+                }`}
+              ></div>
               <span>
-                {completionPercentage === 100 && tendersState.performance?.errorRate === 0 ? 'Excellent' :
-                 completionPercentage > 90 ? 'Good' : 'Partial'} data quality
+                {completionPercentage === 100 &&
+                tendersState.performance?.errorRate === 0
+                  ? "Excellent"
+                  : completionPercentage > 90
+                  ? "Good"
+                  : "Partial"}{" "}
+                data quality
               </span>
             </div>
           </div>
@@ -572,11 +644,15 @@ export default function EnhancedTenderListing({
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2"
               >
-                {showFilters ? <X className="h-4 w-4" /> : <Filter className="h-4 w-4" />}
+                {showFilters ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <Filter className="h-4 w-4" />
+                )}
                 {showFilters ? "Hide Filters" : "Show Filters"}
               </Button>
             )}
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -584,18 +660,23 @@ export default function EnhancedTenderListing({
               disabled={tendersState.loading || isRefreshing}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${(tendersState.loading || isRefreshing) ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  tendersState.loading || isRefreshing ? "animate-spin" : ""
+                }`}
+              />
               Refresh Data
             </Button>
           </div>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Warnings display
   const renderWarnings = () => {
-    if (!tendersState.warnings || tendersState.warnings.length === 0) return null
+    if (!tendersState.warnings || tendersState.warnings.length === 0)
+      return null;
 
     return (
       <Alert className="mb-6">
@@ -609,26 +690,31 @@ export default function EnhancedTenderListing({
           </ul>
         </AlertDescription>
       </Alert>
-    )
-  }
+    );
+  };
 
   // Enhanced loading skeleton that reflects comprehensive data structure
   const renderLoadingSkeleton = () => {
-    const skeletonCount = tendersState.progress?.total || 10
-    const loadedCount = tendersState.progress?.completed || 0
-    
+    const skeletonCount = tendersState.progress?.total || 10;
+    const loadedCount = tendersState.progress?.completed || 0;
+
     return (
       <div className="space-y-6">
         {Array.from({ length: Math.min(skeletonCount, 20) }).map((_, index) => {
-          const isLoaded = index < loadedCount
-          const isLoading = index === loadedCount && tendersState.loading
-          
+          const isLoaded = index < loadedCount;
+          const isLoading = index === loadedCount && tendersState.loading;
+
           return (
-            <Card key={index} className={`transition-all duration-500 ${
-              isLoaded ? 'opacity-100 transform-none' : 
-              isLoading ? 'opacity-75 animate-pulse' : 
-              'opacity-40'
-            }`}>
+            <Card
+              key={index}
+              className={`transition-all duration-500 ${
+                isLoaded
+                  ? "opacity-100 transform-none"
+                  : isLoading
+                  ? "opacity-75 animate-pulse"
+                  : "opacity-40"
+              }`}
+            >
               <CardHeader className="space-y-4">
                 {/* Header badges and ID */}
                 <div className="flex items-start justify-between">
@@ -638,7 +724,7 @@ export default function EnhancedTenderListing({
                   </div>
                   <Skeleton className="h-4 w-32" />
                 </div>
-                
+
                 {/* Title and entity */}
                 <div className="space-y-2">
                   <Skeleton className="h-6 w-4/5" />
@@ -659,7 +745,9 @@ export default function EnhancedTenderListing({
                       <div className="flex-1">
                         <Skeleton className="h-3 w-16 mb-1" />
                         <Skeleton className="h-4 w-24" />
-                        {infoIndex === 2 && <Skeleton className="h-3 w-32 mt-1" />}
+                        {infoIndex === 2 && (
+                          <Skeleton className="h-3 w-32 mt-1" />
+                        )}
                       </div>
                     </div>
                   ))}
@@ -688,9 +776,9 @@ export default function EnhancedTenderListing({
                 </div>
               </CardHeader>
             </Card>
-          )
+          );
         })}
-        
+
         {/* Loading progress indicator at bottom */}
         {tendersState.loading && tendersState.progress && (
           <Card className="border-dashed border-2 border-blue-200 bg-blue-50/50">
@@ -702,17 +790,25 @@ export default function EnhancedTenderListing({
                 </span>
               </div>
               <div className="text-xs text-blue-700">
-                {tendersState.progress.completed} of {tendersState.progress.total} items processed
+                {tendersState.progress.completed} of{" "}
+                {tendersState.progress.total} items processed
                 {tendersState.progress.estimatedTimeRemaining && (
-                  <> • ~{Math.ceil(tendersState.progress.estimatedTimeRemaining / 1000)}s remaining</>
+                  <>
+                    {" "}
+                    • ~
+                    {Math.ceil(
+                      tendersState.progress.estimatedTimeRemaining / 1000
+                    )}
+                    s remaining
+                  </>
                 )}
               </div>
             </CardContent>
           </Card>
         )}
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className={`enhanced-tender-listing ${className}`}>
@@ -722,12 +818,24 @@ export default function EnhancedTenderListing({
           Comprehensive Tender Opportunities
         </h1>
         <p className="text-gray-500">
-          Browse all available procurement opportunities with advanced filtering and search
+          Browse all available procurement opportunities with advanced filtering
+          and search
         </p>
       </div>
 
-      {/* Performance Metrics */}
-      {renderPerformanceMetrics()}
+      {/* Performance Monitor */}
+      {showPerformanceMetrics && (
+        <div className="mb-6">
+          <PerformanceMonitor
+            performance={tendersState.performance}
+            lastUpdated={tendersState.lastUpdated}
+            totalCount={tendersState.totalCount}
+            fetchedCount={tendersState.fetchedCount}
+            loading={tendersState.loading}
+            showOptimizationSuggestions={true}
+          />
+        </div>
+      )}
 
       {/* Progress Indicator */}
       {renderProgressIndicator()}
@@ -778,7 +886,10 @@ export default function EnhancedTenderListing({
         ) : (
           <div className="space-y-6">
             {filteredResult.filteredTenders.map((tender) => (
-              <Card key={tender.ocid} className="hover:shadow-md transition-all duration-200">
+              <Card
+                key={tender.ocid}
+                className="hover:shadow-md transition-all duration-200"
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -793,11 +904,11 @@ export default function EnhancedTenderListing({
                       {tender.tender.id || tender.ocid}
                     </div>
                   </div>
-                  
+
                   <CardTitle className="hover:text-primary transition-colors text-lg leading-tight">
                     {tender.tender.title}
                   </CardTitle>
-                  
+
                   <div className="text-sm text-muted-foreground font-medium">
                     {tender.tender.procuringEntity?.name || "Unknown Entity"}
                   </div>
@@ -815,30 +926,42 @@ export default function EnhancedTenderListing({
                       <div className="flex items-start gap-2">
                         <Building className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                         <div>
-                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Department</div>
-                          <div className="font-medium text-gray-900">{tender.tender.requestForBid.department}</div>
+                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                            Department
+                          </div>
+                          <div className="font-medium text-gray-900">
+                            {tender.tender.requestForBid.department}
+                          </div>
                         </div>
                       </div>
                     )}
-                    
+
                     {tender.tender.requestForBid?.deliveryLocation && (
                       <div className="flex items-start gap-2">
                         <MapPin className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <div>
-                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Delivery Location</div>
-                          <div className="font-medium text-gray-900">{tender.tender.requestForBid.deliveryLocation}</div>
+                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                            Delivery Location
+                          </div>
+                          <div className="font-medium text-gray-900">
+                            {tender.tender.requestForBid.deliveryLocation}
+                          </div>
                         </div>
                       </div>
                     )}
-                    
+
                     {tender.tender.contactInformation?.contactPerson && (
                       <div className="flex items-start gap-2">
                         <div className="h-4 w-4 bg-purple-100 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
                           <div className="h-2 w-2 bg-purple-600 rounded-full"></div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Contact Person</div>
-                          <div className="font-medium text-gray-900">{tender.tender.contactInformation.contactPerson}</div>
+                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                            Contact Person
+                          </div>
+                          <div className="font-medium text-gray-900">
+                            {tender.tender.contactInformation.contactPerson}
+                          </div>
                           {tender.tender.contactInformation.email && (
                             <div className="text-xs text-blue-600 hover:underline cursor-pointer">
                               {tender.tender.contactInformation.email}
@@ -859,9 +982,12 @@ export default function EnhancedTenderListing({
                           <div className="h-2 w-2 bg-emerald-600 rounded-full"></div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Estimated Value</div>
+                          <div className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                            Estimated Value
+                          </div>
                           <div className="font-medium text-gray-900">
-                            {tender.tender.value.currency} {tender.tender.value.amount.toLocaleString()}
+                            {tender.tender.value.currency}{" "}
+                            {tender.tender.value.amount.toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -869,17 +995,29 @@ export default function EnhancedTenderListing({
                   </div>
 
                   {/* Special conditions and briefing info */}
-                  {(tender.tender.specialConditions?.length || tender.tender.briefingSession?.hasBriefing) && (
+                  {(tender.tender.specialConditions?.length ||
+                    tender.tender.briefingSession?.hasBriefing) && (
                     <div className="border-t pt-3 space-y-2">
                       {tender.tender.briefingSession?.hasBriefing && (
                         <div className="flex items-center gap-2 text-sm">
-                          <div className={`h-2 w-2 rounded-full ${tender.tender.briefingSession.isCompulsory ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                          <div
+                            className={`h-2 w-2 rounded-full ${
+                              tender.tender.briefingSession.isCompulsory
+                                ? "bg-red-500"
+                                : "bg-blue-500"
+                            }`}
+                          ></div>
                           <span className="font-medium">
-                            {tender.tender.briefingSession.isCompulsory ? 'Compulsory Briefing' : 'Optional Briefing'}
+                            {tender.tender.briefingSession.isCompulsory
+                              ? "Compulsory Briefing"
+                              : "Optional Briefing"}
                           </span>
                           {tender.tender.briefingSession.date && (
                             <span className="text-muted-foreground">
-                              on {new Date(tender.tender.briefingSession.date).toLocaleDateString()}
+                              on{" "}
+                              {new Date(
+                                tender.tender.briefingSession.date
+                              ).toLocaleDateString()}
                             </span>
                           )}
                           {tender.tender.briefingSession.venue && (
@@ -889,36 +1027,55 @@ export default function EnhancedTenderListing({
                           )}
                         </div>
                       )}
-                      
-                      {tender.tender.specialConditions && tender.tender.specialConditions.length > 0 && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Special Conditions: </span>
-                          <span className="text-orange-700 font-medium">
-                            {tender.tender.specialConditions.length} condition{tender.tender.specialConditions.length !== 1 ? 's' : ''} apply
-                          </span>
-                        </div>
-                      )}
+
+                      {tender.tender.specialConditions &&
+                        tender.tender.specialConditions.length > 0 && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">
+                              Special Conditions:{" "}
+                            </span>
+                            <span className="text-orange-700 font-medium">
+                              {tender.tender.specialConditions.length} condition
+                              {tender.tender.specialConditions.length !== 1
+                                ? "s"
+                                : ""}{" "}
+                              apply
+                            </span>
+                          </div>
+                        )}
                     </div>
                   )}
 
                   <div className="flex items-center justify-between pt-4">
                     <div className="text-sm text-muted-foreground">
                       {tender.tender.tenderPeriod?.endDate ? (
-                        <>Closing {new Date(tender.tender.tenderPeriod.endDate).toLocaleDateString()}</>
+                        <>
+                          Closing{" "}
+                          {new Date(
+                            tender.tender.tenderPeriod.endDate
+                          ).toLocaleDateString()}
+                        </>
                       ) : tender.tender.keyDates?.closingDate ? (
-                        <>Closing {new Date(tender.tender.keyDates.closingDate).toLocaleDateString()}</>
+                        <>
+                          Closing{" "}
+                          {new Date(
+                            tender.tender.keyDates.closingDate
+                          ).toLocaleDateString()}
+                        </>
                       ) : (
                         "Closing date not specified"
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {tender.tender.briefingSession?.hasBriefing && (
                         <Badge variant="outline" className="text-xs">
-                          {tender.tender.briefingSession.isCompulsory ? "Compulsory Briefing" : "Briefing Available"}
+                          {tender.tender.briefingSession.isCompulsory
+                            ? "Compulsory Briefing"
+                            : "Briefing Available"}
                         </Badge>
                       )}
-                      
+
                       <Badge variant="secondary" className="text-xs">
                         {tender.tender.mainProcurementCategory || "General"}
                       </Badge>
@@ -933,12 +1090,13 @@ export default function EnhancedTenderListing({
         <Card className="border border-gray-200">
           <CardContent className="p-12 text-center">
             <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tenders found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No tenders found
+            </h3>
             <p className="text-gray-500 mb-4">
-              {filteredResult.appliedFiltersCount > 0 
+              {filteredResult.appliedFiltersCount > 0
                 ? "Try adjusting your filters or search terms to find more results."
-                : "No tenders are currently available for the selected date range."
-              }
+                : "No tenders are currently available for the selected date range."}
             </p>
             {filteredResult.appliedFiltersCount > 0 && (
               <Button onClick={filterActions.clearFilters} variant="outline">
@@ -949,5 +1107,5 @@ export default function EnhancedTenderListing({
         </Card>
       )}
     </div>
-  )
+  );
 }
