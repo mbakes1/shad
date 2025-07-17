@@ -498,7 +498,7 @@ export async function GET(request: NextRequest) {
 async function handleStreamingResponse(
   request: NextRequest,
   config: StreamingConfig,
-  cacheManager: any,
+  cacheManager: ReturnType<typeof getCacheManager>,
   cacheKey: string
 ): Promise<Response> {
   const encoder = new TextEncoder()

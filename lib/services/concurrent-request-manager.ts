@@ -40,6 +40,7 @@ export interface RequestError {
   retryable: boolean;
   retryAfter?: number;
   statusCode?: number;
+  retryCount: number;
 }
 
 export interface ConcurrentRequestConfig {
