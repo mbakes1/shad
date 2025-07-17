@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import MainLayout from "@/components/main-layout"
-import TenderListing from "@/components/tender-listing"
+import EnhancedTenderListing from "@/components/enhanced-tender-listing"
 
 export const metadata: Metadata = {
   title: "Procurement Tender Opportunities",
@@ -25,7 +25,12 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <MainLayout>
-      <TenderListing />
+      <EnhancedTenderListing 
+        enableVirtualScrolling={true}
+        enableAdvancedFilters={true}
+        showPerformanceMetrics={true}
+        autoRefreshInterval={300000} // 5 minutes
+      />
     </MainLayout>
   )
 }
